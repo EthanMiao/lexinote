@@ -1,36 +1,69 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+LexiNote is a small Next.js monolith for Japanese word lookup plus AI explanation.
 
-## Getting Started
+## Local Setup
 
-First, run the development server:
+Install dependencies:
+
+```bash
+npm install
+```
+
+Create a local env file:
+
+```bash
+cp .env.example .env.local
+```
+
+Create the local PostgreSQL database:
+
+```bash
+createdb lexinote
+createdb lexinote_e2e
+```
+
+Seed the minimal dictionary table:
+
+```bash
+psql postgresql://postgres:postgres@localhost:5432/lexinote -f shared/db/sql/seed.sql
+```
+
+Start the development server:
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Environment
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+`DATABASE_URL` is required.
 
-## Learn More
+`E2E_DATABASE_URL` is required for `npm run test:e2e`. It must point to a local test database such as `lexinote_e2e`.
 
-To learn more about Next.js, take a look at the following resources:
+`OPENAI_API_KEY` is optional. If missing, the app returns a fallback explanation instead of calling the LLM.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Project-level PostgreSQL MCP uses Next's environment loading, so it follows the same `DATABASE_URL` resolution as the app.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Scripts
 
-## Deploy on Vercel
+- `npm run dev`
+- `npm run lint`
+- `npm run build`
+- `npm run test`
+- `npm run test:e2e`
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+`npm run test:e2e` requires `E2E_DATABASE_URL` and a local PostgreSQL test database. The Playwright global setup will apply `shared/db/sql/schema.sql` and `shared/db/sql/seed.sql` to that test database before the browser test runs.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Current Scope
+
+- Word lookup
+- AI explanation for Chinese native speakers
+
+Out of scope for now: auth, history, favorites, exercises, review, voice, cloud deployment.
+
+## Structure
+
+- `app/`: UI and API routes
+- `features/`: word lookup, dictionary, AI explanation services
+- `shared/db/`: centralized SQL and PostgreSQL access

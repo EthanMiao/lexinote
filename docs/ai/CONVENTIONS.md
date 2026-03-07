@@ -5,12 +5,22 @@
 - Prefer TypeScript for all new code.
 - Keep components small and single-purpose.
 - Avoid adding dependencies without clear need.
+- Keep the project as a small monolith.
 
 ## Next.js App Router
 
 - Use `app/` routing conventions (`page.tsx`, `layout.tsx`).
 - Keep global concerns in root `app/layout.tsx`.
 - Keep route-specific logic inside the route segment folder.
+- Keep route handlers thin; move business logic into `features/`.
+
+## Backend Structure
+
+- Put orchestration logic in `features/word-lookup/`.
+- Keep Japanese-specific logic in `features/japanese-dictionary/` and Japanese prompt files.
+- Keep AI generation logic separate from dictionary lookup logic.
+- Keep SQL centralized under `shared/db/sql/`.
+- Use parameterized SQL only.
 
 ## Styling
 
@@ -32,6 +42,6 @@
 ## Quality Bar
 
 - Run `npm run lint` before commit.
+- Run `npm run build` before commit when changing app structure, types, or route handlers.
 - Keep commits focused and descriptive.
 - Update `docs/ai/*` when architecture or workflow changes.
-

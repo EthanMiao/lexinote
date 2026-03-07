@@ -1,65 +1,226 @@
-import Image from "next/image";
+"use client";
+
+import { FormEvent, useState } from "react";
+import type { WordLookupResponse } from "@/shared/types/api";
+
+type ApiError = {
+  error?: {
+    code?: string;
+    message?: string;
+  };
+};
 
 export default function Home() {
+  const [word, setWord] = useState("");
+  const [result, setResult] = useState<WordLookupResponse | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const canSubmit = word.trim().length > 0 && !isLoading;
+
+  async function onSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!word.trim()) {
+      setError("请输入一个日语单词。");
+      setResult(null);
+      return;
+    }
+
+    setError(null);
+    setResult(null);
+    setIsLoading(true);
+
+    try {
+      const response = await fetch("/api/words/explain", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ word }),
+      });
+
+      if (!response.ok) {
+        const payload = (await response.json()) as ApiError;
+        throw new Error(payload.error?.message || "Request failed");
+      }
+
+      const payload = (await response.json()) as WordLookupResponse;
+      setResult(payload);
+    } catch (submitError) {
+      const message =
+        submitError instanceof Error ? submitError.message : "Unexpected error";
+      setError(message);
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
+    <main className="mx-auto flex min-h-screen w-full max-w-5xl flex-col px-6 py-10 sm:px-8">
+      <header className="flex justify-center border-b border-zinc-200/80 pb-6">
+        <div className="w-full max-w-3xl">
+          <p className="text-[11px] tracking-[0.24em] text-zinc-500 uppercase">
+            LexiNote
           </p>
+          <h1 className="mt-3 text-2xl font-medium tracking-tight text-zinc-900">
+            Japanese AI Word Explainer
+          </h1>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+      </header>
+
+      <section className="flex flex-1 flex-col items-center py-14 sm:py-18">
+        <div className="w-full max-w-3xl space-y-8">
+          <div className="space-y-3 text-center">
+            <p className="text-sm leading-7 text-zinc-600">
+              输入一个日语词，查看基础词典信息，以及面向中文母语者的学习型解释。
+            </p>
+          </div>
+
+          <form
+            onSubmit={onSubmit}
+            className="rounded-3xl border border-zinc-200 bg-white px-4 py-4 shadow-[0_1px_2px_rgba(0,0,0,0.03)] sm:px-5"
           >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+              <label className="flex-1">
+                <span className="mb-2 block text-xs font-medium tracking-wide text-zinc-500 uppercase">
+                  Japanese word
+                </span>
+                <input
+                  type="text"
+                  value={word}
+                  onChange={(event) => setWord(event.target.value)}
+                  placeholder="例如：食べる"
+                  className="w-full rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-3 text-[15px] text-zinc-900 outline-none transition focus:border-zinc-400 focus:bg-white"
+                />
+              </label>
+              <button
+                type="submit"
+                disabled={!canSubmit}
+                className="rounded-2xl border border-zinc-900 bg-zinc-900 px-5 py-3 text-sm font-medium text-white transition hover:bg-zinc-800 disabled:cursor-not-allowed disabled:border-zinc-300 disabled:bg-zinc-300"
+              >
+                {isLoading ? "Searching..." : "Search"}
+              </button>
+            </div>
+          </form>
+
+          <section className="space-y-4">
+            {!isLoading && !error && !result ? (
+              <div className="rounded-3xl border border-dashed border-zinc-300 bg-zinc-50/70 px-6 py-12 text-center">
+                <p className="text-sm text-zinc-600">
+                  还没有结果。输入一个日语词后点击 Search。
+                </p>
+              </div>
+            ) : null}
+
+            {isLoading ? (
+              <div className="space-y-4">
+                <div className="rounded-3xl border border-zinc-200 bg-white p-6">
+                  <div className="h-5 w-28 animate-pulse rounded bg-zinc-200" />
+                  <div className="mt-4 space-y-3">
+                    <div className="h-4 w-40 animate-pulse rounded bg-zinc-100" />
+                    <div className="h-4 w-32 animate-pulse rounded bg-zinc-100" />
+                    <div className="h-4 w-full animate-pulse rounded bg-zinc-100" />
+                  </div>
+                </div>
+                <div className="rounded-3xl border border-zinc-200 bg-white p-6">
+                  <div className="h-5 w-36 animate-pulse rounded bg-zinc-200" />
+                  <div className="mt-4 space-y-3">
+                    <div className="h-4 w-full animate-pulse rounded bg-zinc-100" />
+                    <div className="h-4 w-full animate-pulse rounded bg-zinc-100" />
+                    <div className="h-4 w-5/6 animate-pulse rounded bg-zinc-100" />
+                  </div>
+                </div>
+              </div>
+            ) : null}
+
+            {error ? (
+              <div className="rounded-3xl border border-red-200 bg-red-50 px-6 py-5">
+                <p className="text-sm font-medium text-red-700">查询失败</p>
+                <p className="mt-1 text-sm text-red-600">{error}</p>
+              </div>
+            ) : null}
+
+            {result ? (
+              <div className="space-y-4">
+                <article className="rounded-3xl border border-zinc-200 bg-white p-6">
+                  <div className="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
+                    <div>
+                      <p className="text-xs font-medium tracking-wide text-zinc-500 uppercase">
+                        Dictionary Entry
+                      </p>
+                      <h2 className="mt-3 text-3xl font-medium tracking-tight text-zinc-950">
+                        {result.entry.word}
+                      </h2>
+                    </div>
+                    <div className="grid gap-3 text-sm text-zinc-700 sm:min-w-56">
+                      <p>
+                        <span className="text-zinc-500">读音 / Kana</span>
+                        <span className="ml-3 text-zinc-900">
+                          {result.entry.reading || "未知"}
+                        </span>
+                      </p>
+                      <p>
+                        <span className="text-zinc-500">词性</span>
+                        <span className="ml-3 text-zinc-900">
+                          {result.entry.partOfSpeech || "未知"}
+                        </span>
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="mt-6 border-t border-zinc-100 pt-5">
+                    <p className="text-xs font-medium tracking-wide text-zinc-500 uppercase">
+                      Basic Meaning
+                    </p>
+                    <p className="mt-2 text-[15px] leading-7 text-zinc-900">
+                      {result.entry.meaningZh}
+                    </p>
+                  </div>
+                </article>
+
+                <article className="rounded-3xl border border-zinc-200 bg-white p-6">
+                  <p className="text-xs font-medium tracking-wide text-zinc-500 uppercase">
+                    AI Explanation
+                  </p>
+                  <div className="mt-5 grid gap-5">
+                    <div className="rounded-2xl border border-zinc-100 bg-zinc-50/60 px-4 py-4">
+                      <h3 className="text-sm font-medium text-zinc-900">
+                        实际用法
+                      </h3>
+                      <p className="mt-2 whitespace-pre-wrap text-sm leading-7 text-zinc-700">
+                        {result.explanation.actualUsage}
+                      </p>
+                    </div>
+                    <div className="rounded-2xl border border-zinc-100 bg-zinc-50/60 px-4 py-4">
+                      <h3 className="text-sm font-medium text-zinc-900">
+                        常见场景
+                      </h3>
+                      <p className="mt-2 whitespace-pre-wrap text-sm leading-7 text-zinc-700">
+                        {result.explanation.commonScenarios}
+                      </p>
+                    </div>
+                    <div className="rounded-2xl border border-zinc-100 bg-zinc-50/60 px-4 py-4">
+                      <h3 className="text-sm font-medium text-zinc-900">
+                        语感与近义差别
+                      </h3>
+                      <p className="mt-2 whitespace-pre-wrap text-sm leading-7 text-zinc-700">
+                        {result.explanation.nuanceDifferences}
+                      </p>
+                    </div>
+                    <div className="rounded-2xl border border-zinc-100 bg-zinc-50/60 px-4 py-4">
+                      <h3 className="text-sm font-medium text-zinc-900">
+                        中文母语者常犯错误
+                      </h3>
+                      <p className="mt-2 whitespace-pre-wrap text-sm leading-7 text-zinc-700">
+                        {result.explanation.commonMistakes}
+                      </p>
+                    </div>
+                  </div>
+                </article>
+              </div>
+            ) : null}
+          </section>
         </div>
-      </main>
-    </div>
+      </section>
+    </main>
   );
 }

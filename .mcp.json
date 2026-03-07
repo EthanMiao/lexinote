@@ -3,6 +3,16 @@
     "next-devtools": {
       "command": "npx",
       "args": ["-y", "next-devtools-mcp@latest"]
+    },
+    "playwright": {
+      "command": "npx",
+      "args": ["-y", "@playwright/mcp@latest"]
+    },
+    "postgres": {
+      "command": "node",
+      "args": [
+        "scripts/run-postgres-mcp.mjs"
+      ]
     }
   }
 }
