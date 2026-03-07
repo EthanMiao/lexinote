@@ -24,7 +24,6 @@
   - `shared/utils/`: app-level errors
 - `types/`: local ambient typings
 - Root configs: `next.config.ts`, `tsconfig.json`, `eslint.config.mjs`, `postcss.config.mjs`
-- Human-facing overview: `PROJECT_STRUCTURE.md`
 - AI docs index: root `AGENTS.md` -> `docs/ai/*`
 
 ## Runtime Flow
