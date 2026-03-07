@@ -72,7 +72,7 @@
 1. Keep `.mcp.json` at repo root with:
    - `next-devtools-mcp`
    - `@playwright/mcp`
-   - `@modelcontextprotocol/server-postgres`
+   - the project `postgres` launcher at `scripts/run-postgres-mcp.mjs`
 2. In Codex/agent session, initialize docs index once:
    `init`
 3. Before querying docs, read the index resource once to get exact doc paths:
@@ -80,9 +80,10 @@
 4. Query Next docs with an exact path from the index:
    `nextjs_docs(path: "/docs/...")`
 5. Use Playwright MCP for browser-based page verification and UI-flow checks.
-6. Use PostgreSQL MCP to inspect local schema, seed data, and query results during debugging.
+6. Use PostgreSQL MCP to inspect local schema and run read-only SQL with the `query_readonly` tool during debugging.
 7. PostgreSQL MCP uses Next's `@next/env` load order, matching the app's `DATABASE_URL` resolution.
-8. Use `upgrade_nextjs_16` when migrating from older major versions.
+8. PostgreSQL MCP only allows read-only SQL and wraps every query in a read-only transaction.
+9. Use `upgrade_nextjs_16` when migrating from older major versions.
 
 ## Agent Notes
 

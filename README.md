@@ -44,6 +44,7 @@ Open [http://localhost:3000](http://localhost:3000).
 `OPENAI_API_KEY` is optional. If missing, the app returns a fallback explanation instead of calling the LLM.
 
 Project-level PostgreSQL MCP uses Next's environment loading, so it follows the same `DATABASE_URL` resolution as the app.
+It exposes schema resources plus a `query_readonly` tool for debugging local data.
 
 ## Scripts
 
