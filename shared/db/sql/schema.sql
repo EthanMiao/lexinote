@@ -4,4 +4,3 @@ CREATE TABLE IF NOT EXISTS japanese_dictionary_entries (
   meaning_zh TEXT NOT NULL,
   part_of_speech TEXT
 );
-

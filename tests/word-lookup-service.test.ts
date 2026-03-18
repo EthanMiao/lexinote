@@ -4,7 +4,7 @@ import type {
   AIExplanationOutput,
   DictionaryEntry,
 } from "@/shared/types/api";
-import { NotFoundError, ValidationError } from "@/shared/utils/errors";
+import { ValidationError } from "@/shared/utils/errors";
 
 describe("WordLookupService", () => {
   const entry: DictionaryEntry = {
@@ -24,6 +24,7 @@ describe("WordLookupService", () => {
   it("trims input and combines dictionary plus explanation", async () => {
     const dictionaryService = {
       findEntry: vi.fn().mockResolvedValue(entry),
+      saveAiOnlyPlaceholder: vi.fn(),
     };
     const aiExplanationService = {
       explain: vi.fn().mockResolvedValue(explanation),
@@ -35,11 +36,19 @@ describe("WordLookupService", () => {
     );
 
     await expect(service.explainWord("  食べる  ")).resolves.toEqual({
+      word: "食べる",
+      source: "dictionary",
       entry,
       explanation,
     });
     expect(dictionaryService.findEntry).toHaveBeenCalledWith("食べる");
-    expect(aiExplanationService.explain).toHaveBeenCalledWith(entry);
+    expect(dictionaryService.saveAiOnlyPlaceholder).not.toHaveBeenCalled();
+    expect(aiExplanationService.explain).toHaveBeenCalledWith(
+      entry,
+      undefined,
+      undefined,
+      undefined
+    );
   });
 
   it("rejects empty input", async () => {
@@ -50,14 +59,74 @@ describe("WordLookupService", () => {
     );
   });
 
-  it("rejects when dictionary entry is missing", async () => {
+  it("falls back to ai-only explanation when dictionary entry is missing", async () => {
     const dictionaryService = {
       findEntry: vi.fn().mockResolvedValue(null),
+      saveAiOnlyPlaceholder: vi.fn().mockResolvedValue(undefined),
+    };
+    const aiExplanationService = {
+      explainWordOnly: vi.fn().mockResolvedValue(explanation),
+    };
+    const service = new WordLookupService(
+      dictionaryService as never,
+      aiExplanationService as never
+    );
+
+    await expect(service.explainWord("未知词")).resolves.toEqual({
+      word: "未知词",
+      source: "ai-only",
+      entry: null,
+      explanation,
+    });
+    expect(dictionaryService.saveAiOnlyPlaceholder).toHaveBeenCalledWith("未知词");
+    expect(aiExplanationService.explainWordOnly).toHaveBeenCalledWith(
+      "未知词",
+      undefined,
+      undefined,
+      undefined
+    );
+  });
+
+  it("prepares dictionary preview before generating explanation", async () => {
+    const dictionaryService = {
+      findEntry: vi.fn().mockResolvedValue(entry),
+      saveAiOnlyPlaceholder: vi.fn(),
     };
     const service = new WordLookupService(dictionaryService as never, {} as never);
 
-    await expect(service.explainWord("未知词")).rejects.toBeInstanceOf(
-      NotFoundError
+    await expect(service.prepareLookup("食べる")).resolves.toEqual({
+      word: "食べる",
+      source: "dictionary",
+      entry,
+    });
+  });
+
+  it("completes ai-only preview with explanation", async () => {
+    const aiExplanationService = {
+      explainWordOnly: vi.fn().mockResolvedValue(explanation),
+    };
+    const service = new WordLookupService({} as never, aiExplanationService as never);
+
+    await expect(
+      service.completeLookup(
+        {
+          word: "未知词",
+          source: "ai-only",
+          entry: null,
+        },
+        "gpt-5.4"
+      )
+    ).resolves.toEqual({
+      word: "未知词",
+      source: "ai-only",
+      entry: null,
+      explanation,
+    });
+    expect(aiExplanationService.explainWordOnly).toHaveBeenCalledWith(
+      "未知词",
+      "gpt-5.4",
+      undefined,
+      undefined
     );
   });
 });

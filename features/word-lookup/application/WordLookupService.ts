@@ -1,7 +1,11 @@
 import { AIExplanationService } from "@/features/ai-explanation/application/AIExplanationService";
 import { JapaneseDictionaryService } from "@/features/japanese-dictionary/application/JapaneseDictionaryService";
-import type { WordLookupResponse } from "@/shared/types/api";
-import { NotFoundError, ValidationError } from "@/shared/utils/errors";
+import type {
+  SupportedAiModel,
+  WordLookupPreview,
+  WordLookupResponse,
+} from "@/shared/types/api";
+import { ValidationError } from "@/shared/utils/errors";
 
 export class WordLookupService {
   constructor(
@@ -9,7 +13,15 @@ export class WordLookupService {
     private readonly aiExplanationService: AIExplanationService
   ) {}
 
-  async explainWord(rawWord: string): Promise<WordLookupResponse> {
+  async explainWord(
+    rawWord: string,
+    model?: SupportedAiModel
+  ): Promise<WordLookupResponse> {
+    const preview = await this.prepareLookup(rawWord);
+    return this.completeLookup(preview, model);
+  }
+
+  async prepareLookup(rawWord: string): Promise<WordLookupPreview> {
     const word = rawWord.trim();
     if (!word) {
       throw new ValidationError("word is required");
@@ -17,10 +29,44 @@ export class WordLookupService {
 
     const entry = await this.dictionaryService.findEntry(word);
     if (!entry) {
-      throw new NotFoundError(`word not found: ${word}`);
+      await this.dictionaryService.saveAiOnlyPlaceholder(word);
+      return {
+        word,
+        source: "ai-only",
+        entry: null,
+      };
     }
 
-    const explanation = await this.aiExplanationService.explain(entry);
-    return { entry, explanation };
+    return {
+      word,
+      source: "dictionary",
+      entry,
+    };
+  }
+
+  async completeLookup(
+    preview: WordLookupPreview,
+    model?: SupportedAiModel,
+    onTextDelta?: (delta: string) => void | Promise<void>,
+    signal?: AbortSignal
+  ): Promise<WordLookupResponse> {
+    const explanation = preview.entry
+      ? await this.aiExplanationService.explain(
+          preview.entry,
+          model,
+          onTextDelta,
+          signal
+        )
+      : await this.aiExplanationService.explainWordOnly(
+          preview.word,
+          model,
+          onTextDelta,
+          signal
+        );
+
+    return {
+      ...preview,
+      explanation,
+    };
   }
 }
